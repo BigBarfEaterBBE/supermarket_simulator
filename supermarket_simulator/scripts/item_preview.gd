@@ -11,8 +11,11 @@ func build():
 			for z in item_size.z:
 				var cube = MeshInstance3D.new()
 				cube.mesh = BoxMesh.new()
-				cube.material_override = StandardMaterial3D.new()
-				cube.material_override.albedo_color = Color(0, 1, 0, 0.5)
+				var mat := StandardMaterial3D.new()
+				mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+				mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+				mat.albedo_color = Color(0, 1, 0, 0.5)
+				cube.material_override = mat
 				cube.position = Vector3(x, y, z) * cell_size
 				$Blocks.add_child(cube)
 				

@@ -6,9 +6,11 @@ var grid: Grid3D
 var cursor := Vector3i.ZERO
 var current_item := ItemData.new(1, "Milk", Vector3i(1,3,1))
 var preview
+var offset: Vector3
 
 #create grid cubes
 func _ready():
+	offset = Vector3( (grid_size.x - 1) * 0.5, (grid_size.y - 1) *0.5, (grid_size.z - 1) * 0.5) * cell_size
 	preview = preload("res://supermarket_simulator/scenes/item_preview.tscn").instantiate()
 	preview.item_size = current_item.size
 	preview.build()
@@ -19,8 +21,13 @@ func _ready():
 			for z in grid_size.z:
 				var cube = MeshInstance3D.new()
 				cube.mesh = BoxMesh.new()
+				var mat := StandardMaterial3D.new()
+				mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+				mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+				mat.albedo_color = Color(0.85, 0.95, 0.85)
+				cube.material_override = mat
 				cube.scale = Vector3.ONE * 0.95
-				cube.position = Vector3(x, y, z) * cell_size
+				cube.position = (Vector3(x, y, z) * cell_size) - offset
 				$Cells.add_child(cube)
 
 #movement
@@ -43,7 +50,7 @@ func _process(_delta):
 			grid.place(current_item.id, current_item.size, cursor)
 
 func update_preview():
-	preview.position = Vector3(cursor) * cell_size
+	preview.position = (Vector3(cursor) *  cell_size) - offset
 	var valid = grid.can_place(current_item.size, cursor)
 	for cube in preview.get_node("Blocks").get_children():
 		if valid:
