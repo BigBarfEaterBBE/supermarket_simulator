@@ -5,6 +5,8 @@ extends Node2D
 @export var views := ["top", "front", "side"]
 var view_index := 0
 
+var placed_items := [] #each entry = pos: vector3i, size: vector3i
+var placed_visuals: Node2D
 var grid = [] #2d array track occupancy
 var cursor_3d := Vector3i.ZERO
 
@@ -26,6 +28,9 @@ func _ready():
 	preview_rect = ColorRect.new()
 	preview_rect.color = Color(0,1,0,0.5)
 	add_child(preview_rect)
+	#hold placed visuals
+	placed_visuals = Node2D.new()
+	add_child(placed_visuals)
 	
 	update_preview()
 
@@ -96,6 +101,7 @@ func handle_input():
 		var item_size_2d := get_item_size_for_view()
 		if can_place(item_size_2d, cursor_2d):
 			place_item(item_size_2d, cursor_2d)
+			redraw_placed_items()
 
 func update_preview():
 	var cursor_2d := get_cursor_2d_for_view()
@@ -120,12 +126,15 @@ func can_place(size: Vector2i, pos: Vector2i) -> bool:
 	return true
 
 func place_item(size: Vector2i, pos: Vector2i):
-	for y in range(size.y):
-		for x in range(size.x):
-			grid[pos.y + y][pos.x + x] = true
+	placed_items.append({
+		"pos": cursor_3d,
+		"size": current_item["size"]
+	})
+	rebuild_grid()
 
 func update_grid_view():
 	rebuild_grid()
+	redraw_placed_items()
 	
 	var colors = [
 		Color(0.7, 0.7, 0.7),
@@ -155,6 +164,16 @@ func rebuild_grid():
 		grid[y] = []
 		for x in range(grid_size.x):
 			grid[y].append(false)
+	#project placed items
+	for item in placed_items:
+		var size_2d := get_item_size_for_view_from_3d(item["size"])
+		var pos_2d := get_cursor_2d_for_view_from_3d(item["pos"])
+		for y in range(size_2d.y):
+			for x in range(size_2d.x):
+				var gx := pos_2d.x + x
+				var gy := pos_2d.y + y
+				if gx >= 0 and gy >= 0 and gx < grid_size.x and gy < grid_size.y:
+					grid[gy][gx] = true
 	grid_offset = Vector2(
 		grid_size.x * cell_size / 2,
 		grid_size.y * cell_size / 2
@@ -179,4 +198,39 @@ func get_cursor_2d_for_view() -> Vector2i:
 			return Vector2i(cursor_3d.x, cursor_3d.y)
 		"side":
 			return Vector2i(cursor_3d.z, cursor_3d.y)
+	return Vector2i.ZERO
+
+func redraw_placed_items():
+	for child in placed_visuals.get_children():
+		child.queue_free()
+	
+	for item in placed_items:
+		var rect := ColorRect.new()
+		rect.color = Color(0.2, 0.8, 0.2, 0.8)
+		
+		var size_2d := get_item_size_for_view_from_3d(item["size"])
+		var pos_2d := get_cursor_2d_for_view_from_3d(item["pos"])
+		
+		rect.size = Vector2(size_2d.x, size_2d.y) * cell_size
+		rect.position = (get_viewport_rect().size / 2 - grid_offset + Vector2(pos_2d.x, pos_2d.y) * cell_size)
+		placed_visuals.add_child(rect)
+
+func get_item_size_for_view_from_3d(size: Vector3i) -> Vector2i:
+	match views[view_index]:
+		"top":
+			return Vector2i(size.x, size.z)
+		"front":
+			return Vector2i(size.x, size.y)
+		"side":
+			return Vector2i(size.z, size.y)
+	return Vector2i.ONE
+
+func get_cursor_2d_for_view_from_3d(pos: Vector3i) -> Vector2i:
+	match views[view_index]:
+		"top":
+			return Vector2i(pos.x, pos.z)
+		"front":
+			return Vector2i(pos.x,pos.y)
+		"side":
+			return Vector2i(pos.z,pos.y)
 	return Vector2i.ZERO
