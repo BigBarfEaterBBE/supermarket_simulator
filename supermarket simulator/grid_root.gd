@@ -1,41 +1,30 @@
 extends Node2D
 
-@export var grid_size: Vector2i = Vector2i(6, 4) #columns, rows
+@export var container_size := Vector3i(6, 4, 5) #X = width, Y = heigh, Z = depth
 @export var cell_size: int = 64 #pixel size
 @export var views := ["top", "front", "side"]
 var view_index := 0
 
 var grid = [] #2d array track occupancy
-var cursor := Vector2i.ZERO
+var cursor_3d := Vector3i.ZERO
 
-var current_item = {"name":"Milk", "size":Vector2i(1,3)} # width x height
+var current_item = {"name":"Milk", "size":Vector3i(1,3,2)} # width x height x depth
 var preview_rect: ColorRect
 var grid_lines: Node2D
+var grid_size: Vector2i
 
 var grid_offset: Vector2
 
 func _ready():
-	#init grid array
-	grid.resize(grid_size.y)
-	for y in range(grid_size.y):
-		grid[y] = []
-		for x in range(grid_size.x):
-			grid[y].append(false) #false = empty
-	#center grid
-	grid_offset = Vector2((grid_size.x * cell_size)/2, (grid_size.y * cell_size)/2)
 	#create grid lines
 	grid_lines = Node2D.new()
 	grid_lines.position = get_viewport_rect().size / 2
 	add_child(grid_lines)
-	draw_grid_lines()
+	#init grid array
+	rebuild_grid()
 	#creatae prev
 	preview_rect = ColorRect.new()
 	preview_rect.color = Color(0,1,0,0.5)
-	preview_rect.size = Vector2(
-		current_item["size"].x * cell_size,
-		current_item["size"].y * cell_size
-	)
-	preview_rect.position = get_viewport_rect().size / 2 -grid_offset
 	add_child(preview_rect)
 	
 	update_preview()
@@ -70,15 +59,29 @@ func _process(_delta):
 	update_preview()
 
 func handle_input():
-	#wasd moves cursor
-	if Input.is_action_just_pressed("move_left"):
-		cursor.x = max(0, cursor.x - 1)
-	if Input.is_action_just_pressed("move_right"):
-		cursor.x = min(grid_size.x - current_item["size"].x, cursor.x + 1)
-	if Input.is_action_just_pressed("move_up"):
-		cursor.y = max(0, cursor.y - 1)
-	if Input.is_action_just_pressed("move_down"):
-		cursor.y = min(grid_size.y - current_item["size"].y, cursor.y + 1)
+	var delta := Vector3i.ZERO
+	match views[view_index]:
+		"top":
+			if Input.is_action_just_pressed("move_left"): delta.x -= 1
+			if Input.is_action_just_pressed("move_right"): delta.x += 1
+			if Input.is_action_just_pressed("move_up"): delta.z -= 1
+			if Input.is_action_just_pressed("move_down"): delta.z += 1
+		"front":
+			if Input.is_action_just_pressed("move_left"): delta.x -= 1
+			if Input.is_action_just_pressed("move_right"): delta.x += 1
+			if Input.is_action_just_pressed("move_up"): delta.y -= 1
+			if Input.is_action_just_pressed("move_down"): delta.y += 1
+		"side":
+			if Input.is_action_just_pressed("move_left"): delta.z -= 1
+			if Input.is_action_just_pressed("move_right"): delta.z += 1
+			if Input.is_action_just_pressed("move_up"): delta.y -= 1
+			if Input.is_action_just_pressed("move_down"): delta.y += 1
+	cursor_3d += delta
+	#clamp container
+	var item: Vector3i = current_item["size"]
+	cursor_3d.x = clamp(cursor_3d.x, 0, container_size.x - item.x)
+	cursor_3d.y = clamp(cursor_3d.y, 0, container_size.y - item.y)
+	cursor_3d.z = clamp(cursor_3d.z, 0, container_size.z - item.z)
 	#switch view
 	if Input.is_action_just_pressed("view_next"):
 		view_index = (view_index + 1) % views.size()
@@ -89,16 +92,21 @@ func handle_input():
 		
 	#place item
 	if Input.is_action_just_pressed("place_item"):
-		if can_place(current_item["size"], cursor):
-			place_item(current_item["size"], cursor)
+		var cursor_2d := get_cursor_2d_for_view()
+		var item_size_2d := get_item_size_for_view()
+		if can_place(item_size_2d, cursor_2d):
+			place_item(item_size_2d, cursor_2d)
 
 func update_preview():
-	preview_rect.position = get_viewport_rect().size / 2 - grid_offset + Vector2(cursor.x * cell_size, cursor.y * cell_size)
-
-	if can_place(current_item["size"], cursor):
-		preview_rect.color = Color(0, 1, 0, 0.5)
-	else:
-		preview_rect.color = Color(1,0,0,0.5)
+	var cursor_2d := get_cursor_2d_for_view()
+	var item_size_2d := get_item_size_for_view()
+	
+	preview_rect.size = Vector2(
+		item_size_2d.x * cell_size,
+		item_size_2d.y * cell_size
+	)
+	preview_rect.position = get_viewport_rect().size / 2 - grid_offset + Vector2(cursor_2d.x * cell_size, cursor_2d.y * cell_size)
+	preview_rect.color = (Color(0,1,0,0.5) if can_place(item_size_2d, cursor_2d) else Color(1,00,0,0.5))
 
 func can_place(size: Vector2i, pos: Vector2i) -> bool:
 	for y in range(size.y):
@@ -117,7 +125,58 @@ func place_item(size: Vector2i, pos: Vector2i):
 			grid[pos.y + y][pos.x + x] = true
 
 func update_grid_view():
-	#tint grid diff for each view FOR NOW
-	var colors = [Color(0.7, 0.7, 0.7), Color(0.6, 0.6, 1), Color(1, 0.6, 0.6)]
+	rebuild_grid()
+	
+	var colors = [
+		Color(0.7, 0.7, 0.7),
+		Color(0.6,0.6,1.0),
+		Color(1.0,0.6,0.6)
+	]
+	
 	for line in grid_lines.get_children():
 		line.default_color = colors[view_index]
+
+#return active 2d grid size
+func get_grid_size_for_view() -> Vector2i:
+	match views[view_index]:
+		"top":
+			return Vector2i(container_size.x, container_size.z)
+		"front":
+			return Vector2i(container_size.x, container_size.y)
+		"side":
+			return Vector2i(container_size.z, container_size.y)
+	return Vector2i.ZERO
+
+func rebuild_grid():
+	grid_size = get_grid_size_for_view()
+	grid.clear()
+	grid.resize(grid_size.y)
+	for y in range(grid_size.y):
+		grid[y] = []
+		for x in range(grid_size.x):
+			grid[y].append(false)
+	grid_offset = Vector2(
+		grid_size.x * cell_size / 2,
+		grid_size.y * cell_size / 2
+	)
+	draw_grid_lines()
+
+func get_item_size_for_view() -> Vector2i:
+	match views[view_index]:
+		"top":
+			return Vector2i(current_item["size"].x, current_item["size"].z)
+		"front":
+			return Vector2i(current_item["size"].x, current_item["size"].y)
+		"side":
+			return Vector2i(current_item["size"].z, current_item["size"].y)
+	return Vector2i.ONE
+
+func get_cursor_2d_for_view() -> Vector2i:
+	match views[view_index]:
+		"top":
+			return Vector2i(cursor_3d.x, cursor_3d.z)
+		"front":
+			return Vector2i(cursor_3d.x, cursor_3d.y)
+		"side":
+			return Vector2i(cursor_3d.z, cursor_3d.y)
+	return Vector2i.ZERO
