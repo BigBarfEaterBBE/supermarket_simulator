@@ -84,9 +84,9 @@ func handle_input():
 	cursor_3d += delta
 	#clamp container
 	var item: Vector3i = current_item["size"]
-	cursor_3d.x = clamp(cursor_3d.x, 0, container_size.x - item.x)
-	cursor_3d.y = clamp(cursor_3d.y, 0, container_size.y - item.y)
-	cursor_3d.z = clamp(cursor_3d.z, 0, container_size.z - item.z)
+	cursor_3d.x = clamp(cursor_3d.x, 0, container_size.x - current_item["size"].x)
+	cursor_3d.y = clamp(cursor_3d.y, 0, container_size.y - current_item["size"].y)
+	cursor_3d.z = clamp(cursor_3d.z, 0, container_size.z - current_item["size"].z)
 	#switch view
 	if Input.is_action_just_pressed("view_next"):
 		view_index = (view_index + 1) % views.size()
@@ -102,6 +102,11 @@ func handle_input():
 		if can_place(item_size_2d, cursor_2d):
 			place_item(item_size_2d, cursor_2d)
 			redraw_placed_items()
+	
+	#rotate item
+	if Input.is_action_just_pressed("rotate_item"):
+		rotate_current_item()
+		update_preview()
 
 func update_preview():
 	var cursor_2d := get_cursor_2d_for_view()
@@ -234,3 +239,17 @@ func get_cursor_2d_for_view_from_3d(pos: Vector3i) -> Vector2i:
 		"side":
 			return Vector2i(pos.z,pos.y)
 	return Vector2i.ZERO
+
+func rotate_current_item():
+	var size: Vector3i = current_item["size"]
+	
+	match views[view_index]:
+		"top":
+			#rotate around y (swap x/z)
+			current_item["size"] = Vector3i(size.z, size.y, size.x)
+		"front":
+			#rotate around z
+			current_item["size"] = Vector3i(size.y, size.x, size.z)
+		"side":
+			#rotate around x
+			current_item["size"] = Vector3i(size.x, size.z, size.y)
