@@ -1,5 +1,6 @@
 extends Node2D
 
+@export var milk_texture: Texture2D
 @export var container_size := Vector3i(6, 4, 5) #X = width, Y = heigh, Z = depth
 @export var cell_size: int = 64 #pixel size
 @export var views := ["top", "front", "side"]
