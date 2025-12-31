@@ -4,13 +4,21 @@ extends Node2D
 @export var cell_size: int = 64 #pixel size
 @export var views := ["top", "front", "side"]
 var view_index := 0
+const FACE_COLORS = {
+	"top": Color(0.9, 0.9, 0.9),
+	"bottom": Color(0.3, 0.3, 0.3),
+	"front": Color(0.8, 0.9, 1.0),
+	"back": Color(0.5, 0.6, 0.7),
+	"left": Color(0.9, 0.8, 0.7),
+	"right": Color(0.7, 0.6, 0.5)
+}
 
 var placed_items := [] #each entry = pos: vector3i, size: vector3i
 var placed_visuals: Node2D
 var grid = [] #2d array track occupancy
 var grid_3d := {} #dict<Vector3i, bool>
 var cursor_3d := Vector3i.ZERO
-var current_item = {"name":"Milk", "size":Vector3i(1,3,2)} # width x height x depth
+var current_item = {"name":"Milk", "size":Vector3i(1,3,2), "rotation": Vector3i.ZERO} # width x height x depth
 
 var preview_rect: ColorRect
 var grid_lines: Node2D
@@ -80,7 +88,8 @@ func handle_input():
 			place_pos.y = cursor_3d.y
 		placed_items.append({
 			"pos": place_pos,
-			"size": current_item["size"]
+			"size": current_item["size"],
+			"rotation": current_item["rotation"]
 		})
 		rebuild_grid()
 		redraw_placed_items()
@@ -97,12 +106,23 @@ func clamp_cursor():
 	cursor_3d.z = clamp(cursor_3d.z, 0, container_size.z - size.z)
 
 func place_item_if_valid(pos: Vector3i):
-	if can_place_with_depth(pos):
-		var placed_pos = pos
-		placed_pos.y = 0
-		placed_items.append({"pos": placed_pos, "size": current_item["size"]})
-		rebuild_grid()
-		redraw_placed_items()
+	# Determine the correct Y position (drop height)
+	var drop_y = 0
+	while drop_y < container_size.y:
+		var test_pos = Vector3i(pos.x, drop_y, pos.z)
+		if collides_3d(test_pos, current_item["size"]):
+			break
+		drop_y += 1
+	drop_y -= 1  # last valid position
+	
+	if drop_y < 0:
+		return  # can't place anywhere
+	
+	var placed_pos = Vector3i(pos.x, drop_y, pos.z)
+	placed_items.append({"pos": placed_pos, "size": current_item["size"]})
+	rebuild_grid()
+	redraw_placed_items()
+
 
 #----------------PREVIEW----------------
 func update_preview():
@@ -115,17 +135,13 @@ func update_preview():
 
 #----------------PLACEMENT----------------
 func can_place_preview(pos: Vector3i) -> bool:
-	if collides_3d(pos, current_item["size"]):
-		return false
 	if views[view_index] == "top":
 		return find_stack_height(pos, current_item["size"]) != -1
-	return has_support(pos, current_item["size"])
+	return has_support(pos, current_item["size"]) \
+		and not collides_3d(pos, current_item["size"])
 
-func can_place_with_depth(pos_3d: Vector3i) -> bool:
-	#must be absoslute bottom
-	if pos_3d.y != 0:
-		return false
-	return can_place(get_item_size_for_view(), get_cursor_2d_from_3d(pos_3d, current_item["size"]))
+
+
 
 func can_place(size: Vector2i, pos: Vector2i) -> bool:
 	for y in range(size.y):
@@ -226,6 +242,16 @@ func find_stack_height(pos: Vector3i, size: Vector3i) -> int:
 		y -= 1
 	return -1
 
+func get_depth_shade_factor(pos: Vector3i) -> float:
+	match views[view_index]:
+		"top":
+			return float(pos.y) / max(1, container_size.y - 1)
+		"front":
+			return float(pos.z) / max(1, container_size.z - 1)
+		"side":
+			return float(pos.x) / max(1, container_size.x - 1)
+	return 0.0
+
 func get_grid_size_for_view() -> Vector2i:
 	match views[view_index]:
 		"top":
@@ -267,6 +293,39 @@ func get_cursor_2d_from_3d(pos: Vector3i, size: Vector3i = Vector3i.ONE) -> Vect
 			return Vector2i(pos.z,container_size.y - pos.y - size.y)
 	return Vector2i.ZERO
 
+func get_visible_face_for_item(item: Dictionary) -> String:
+	var rot: Vector3i = item["rotation"]
+	match views[view_index]:
+		"top":
+			if rot.y % 2 == 0:
+				return "top"
+			else:
+				return "bottom"
+
+		"front":
+			if rot.z % 2 == 0:
+				return "front"
+			else:
+				return "back"
+
+		"side":
+			if rot.x % 2 == 0:
+				return "right"
+			else:
+				return "left"
+	return "top"
+		
+
+func get_visible_face_for_view() -> String:
+	match views[view_index]:
+		"top":
+			return "top"
+		"front":
+			return "front"
+		"side":
+			return "right"
+	return "top"
+
 func has_support(pos: Vector3i, size: Vector3i) -> bool:
 	#on floor
 	if pos.y == 0:
@@ -285,7 +344,17 @@ func redraw_placed_items():
 	
 	for item in placed_items:
 		var rect := ColorRect.new()
-		rect.color = Color(0.2, 0.8, 0.2, 0.8)
+		var face := get_visible_face_for_item(item)
+		var base_color = FACE_COLORS[face]
+		
+		var depth := get_depth_shade_factor(item["pos"])
+		var shade = lerp(1.0, 0.5, depth)
+		rect.color = Color(
+			base_color.r * shade,
+			base_color.g * shade,
+			base_color.b * shade,
+			0.9
+		)
 		
 		var size_2d := get_item_size_for_view_from_3d(item["size"])
 		var pos_2d := get_cursor_2d_from_3d(item["pos"], item["size"])
@@ -296,14 +365,15 @@ func redraw_placed_items():
 
 func rotate_current_item():
 	var size: Vector3i = current_item["size"]
+	var rot: Vector3i = current_item["rotation"]
 	
 	match views[view_index]:
 		"top":
-			#rotate around y (swap x/z)
 			current_item["size"] = Vector3i(size.z, size.y, size.x)
+			current_item["rotation"].y = (rot.y + 1) % 4
 		"front":
-			#rotate around z
 			current_item["size"] = Vector3i(size.y, size.x, size.z)
+			current_item["rotation"].z = (rot.z + 1) % 4
 		"side":
-			#rotate around x
 			current_item["size"] = Vector3i(size.x, size.z, size.y)
+			current_item["rotation"].x = (rot.x + 1) % 4
