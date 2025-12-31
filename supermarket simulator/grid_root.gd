@@ -8,6 +8,7 @@ var view_index := 0
 var placed_items := [] #each entry = pos: vector3i, size: vector3i
 var placed_visuals: Node2D
 var grid = [] #2d array track occupancy
+var grid_3d := {} #dict<Vector3i, bool>
 var cursor_3d := Vector3i.ZERO
 var current_item = {"name":"Milk", "size":Vector3i(1,3,2)} # width x height x depth
 
@@ -67,7 +68,22 @@ func handle_input():
 		
 	#place item
 	if Input.is_action_just_pressed("place_item"):
-		place_item_if_valid(cursor_3d)
+		var place_pos := cursor_3d
+		if views[view_index] == "top":
+			var y := find_stack_height(cursor_3d, current_item["size"])
+			if y == -1:
+				return
+			place_pos.y = y
+		else:
+			if not has_support(cursor_3d, current_item["size"]):
+				return
+			place_pos.y = cursor_3d.y
+		placed_items.append({
+			"pos": place_pos,
+			"size": current_item["size"]
+		})
+		rebuild_grid()
+		redraw_placed_items()
 	
 	#rotate item
 	if Input.is_action_just_pressed("rotate_item"):
@@ -95,9 +111,16 @@ func update_preview():
 	
 	preview_rect.size = size_2d * cell_size
 	preview_rect.position = get_viewport_rect().size / 2 - grid_offset + Vector2(cursor_2d.x * cell_size, cursor_2d.y * cell_size)
-	preview_rect.color = Color(0,1,0,0.5) if can_place_with_depth(cursor_3d) else Color(1,0,0,0.5)
+	preview_rect.color = Color(0,1,0,0.5) if can_place_preview(cursor_3d) else Color(1,0,0,0.5)
 
 #----------------PLACEMENT----------------
+func can_place_preview(pos: Vector3i) -> bool:
+	if collides_3d(pos, current_item["size"]):
+		return false
+	if views[view_index] == "top":
+		return find_stack_height(pos, current_item["size"]) != -1
+	return has_support(pos, current_item["size"])
+
 func can_place_with_depth(pos_3d: Vector3i) -> bool:
 	#must be absoslute bottom
 	if pos_3d.y != 0:
@@ -120,6 +143,17 @@ func update_grid_view():
 	set_grid_color(view_index)
 
 func rebuild_grid():
+	# --- rebuild 3D occupancy ---
+	grid_3d.clear()
+	for item in placed_items:
+		var pos: Vector3i = item["pos"]
+		var size: Vector3i = item["size"]
+		for y in range(size.y):
+			for z in range(size.z):
+				for x in range(size.x):
+					grid_3d[pos + Vector3i(x, y, z)] = true
+
+	# --- rebuild 2D grid for current view ---
 	grid_size = get_grid_size_for_view()
 	grid.clear()
 	grid.resize(grid_size.y)
@@ -127,18 +161,21 @@ func rebuild_grid():
 		grid[y] = []
 		for x in range(grid_size.x):
 			grid[y].append(false)
-	#project placed items
-	for item in placed_items:
-		var size_2d := get_item_size_for_view_from_3d(item["size"])
-		var pos_2d := get_cursor_2d_from_3d(item["pos"], item["size"])
-		for y in range(size_2d.y):
-			for x in range(size_2d.x):
-				var gx := pos_2d.x + x
-				var gy := pos_2d.y + y
-				if gx >= 0 and gy >= 0 and gx < grid_size.x and gy < grid_size.y:
-					grid[gy][gx] = true
-	grid_offset = grid_size * cell_size / 2
+
+	# --- project 3D occupancy into 2D ---
+	for cell in grid_3d.keys():
+		var pos_2d := get_cursor_2d_from_3d(cell)
+		if pos_2d.x >= 0 and pos_2d.y >= 0 \
+		and pos_2d.x < grid_size.x and pos_2d.y < grid_size.y:
+			grid[pos_2d.y][pos_2d.x] = true
+
+	# --- grid visuals ---
+	grid_offset = Vector2(
+		grid_size.x * cell_size / 2,
+		grid_size.y * cell_size / 2
+	)
 	draw_grid_lines()
+
 
 func draw_grid_lines():
 	for child in grid_lines.get_children():
@@ -171,6 +208,24 @@ func set_grid_color(index: int):
 		line.default_color = colors[index]
 
 #----------------UTILITIES----------------
+func collides_3d(pos: Vector3i, size: Vector3i) -> bool:
+	for y in range(size.y):
+		for z in range(size.z):
+			for x in range(size.x):
+				var cell = pos + Vector3i(x, y, z)
+				if grid_3d.has(cell):
+					return true
+	return false
+
+func find_stack_height(pos: Vector3i, size: Vector3i) -> int:
+	var y := container_size.y - size.y
+	while y >= 0:
+		var test_pos = Vector3i(pos.x, y, pos.z)
+		if has_support(test_pos, size) and not collides_3d(test_pos,size):
+			return y
+		y -= 1
+	return -1
+
 func get_grid_size_for_view() -> Vector2i:
 	match views[view_index]:
 		"top":
@@ -211,6 +266,18 @@ func get_cursor_2d_from_3d(pos: Vector3i, size: Vector3i = Vector3i.ONE) -> Vect
 		"side":
 			return Vector2i(pos.z,container_size.y - pos.y - size.y)
 	return Vector2i.ZERO
+
+func has_support(pos: Vector3i, size: Vector3i) -> bool:
+	#on floor
+	if pos.y == 0:
+		return true
+	#if box below is occupied
+	for z in range(size.z):
+		for x in range(size.x):
+			var below := Vector3i(pos.x + x, pos.y - 1, pos.z + z)
+			if grid_3d.has(below):
+				return true
+	return false
 
 func redraw_placed_items():
 	for child in placed_visuals.get_children():
