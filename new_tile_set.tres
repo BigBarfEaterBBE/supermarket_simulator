@@ -1,17 +1,34 @@
-[gd_resource type="TileSet" load_steps=3 format=3 uid="uid://dhncfhnppiujf"]
+[gd_resource type="TileSet" load_steps=5 format=3 uid="uid://dhncfhnppiujf"]
 
 [ext_resource type="Texture2D" uid="uid://ccs6ynjj3pfpy" path="res://IMG_6999.png" id="1_e3020"]
+[ext_resource type="Texture2D" uid="uid://d1bxnx6gx3njb" path="res://IMG_7007.png" id="2_ujgj0"]
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_ujgj0"]
-resource_name = "<CompressedTexture2D#-9223369345101378519>"
+resource_name = "normal"
 texture = ExtResource("1_e3020")
 texture_region_size = Vector2i(256, 256)
+2:0/next_alternative_id = 3
 2:0/0 = 0
-1:1/size_in_atlas = Vector2i(1, 3)
 1:1/0 = 0
-3:1/size_in_atlas = Vector2i(1, 3)
+1:2/0 = 0
+1:3/0 = 0
 3:1/0 = 0
+3:2/0 = 0
+3:3/0 = 0
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_02c43"]
+resource_name = "rotated"
+texture = ExtResource("2_ujgj0")
+texture_region_size = Vector2i(256, 256)
+1:0/0 = 0
+2:1/0 = 0
+1:1/0 = 0
+0:1/0 = 0
+2:2/0 = 0
+1:2/0 = 0
+0:2/0 = 0
 
 [resource]
 tile_size = Vector2i(256, 256)
 sources/0 = SubResource("TileSetAtlasSource_ujgj0")
+sources/1 = SubResource("TileSetAtlasSource_02c43")
