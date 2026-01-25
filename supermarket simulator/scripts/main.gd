@@ -2,13 +2,13 @@ extends Node2D
 
 # Grid size
 const SIZE_X := 6
-const SIZE_Y := 4
-const SIZE_Z := 5
+const SIZE_Y := 6
+const SIZE_Z := 6
 
 # 2D grid dictionary: key = Vector2i(x,y), value = block type string
 var grid_2d := {}
 
-# Stores base position of placed blocks
+# Stores the base positions of placed blocks (not individual tiles)
 var placed_blocks := []
 
 # Cursor position 
@@ -20,15 +20,10 @@ var rot := 0
 # TileMap (only front view now)
 @onready var front_map := $FrontViewTileMap
 
-# Tile IDs
+# Tile IDs - Only need vertical tiles now
 const TILE_MILK_BOTTOM := Vector2i(3, 3)
 const TILE_MILK_MIDDLE := Vector2i(3, 2)
 const TILE_MILK_TOP := Vector2i(3, 1)
-
-#Horizontal tile IDs
-const TILE_MILK_H_BOTTOM := Vector2i(0,2)
-const TILE_MILK_H_MIDDLE := Vector2i(1,2)
-const TILE_MILK_H_TOP := Vector2i(2,2)
 
 func _ready():
 	var screen_center = get_viewport_rect().size / 2
@@ -96,9 +91,9 @@ func _input(event):
 	if moved:
 		queue_redraw()
 
-func get_block_position(pos: Vector2i, rot: int) -> Array[Vector2i]:
+func get_block_position(pos: Vector2i, rotation: int) -> Array[Vector2i]:
 	var positions: Array[Vector2i] = []
-	if rot == 0: #vertical, w = 1 h = 3
+	if rotation == 0: #vertical, w = 1 h = 3
 		positions.append(Vector2i(pos.x, pos.y))
 		positions.append(Vector2i(pos.x, pos.y+1))
 		positions.append(Vector2i(pos.x, pos.y+2))
@@ -108,8 +103,8 @@ func get_block_position(pos: Vector2i, rot: int) -> Array[Vector2i]:
 		positions.append(Vector2i(pos.x + 2, pos.y))
 	return positions
 
-func can_place_block(pos: Vector2i, rot: int) -> bool:
-	var positions = get_block_position(pos, rot)
+func can_place_block(pos: Vector2i, rotation: int) -> bool:
+	var positions = get_block_position(pos, rotation)
 	for block_pos in positions:
 		if is_occupied(block_pos):
 			return false
@@ -118,23 +113,30 @@ func can_place_block(pos: Vector2i, rot: int) -> bool:
 func is_occupied(pos: Vector2i) -> bool:
 	return grid_2d.has(pos)
 
+func _update_tile(tile_pos: Vector2) -> int:
+	var tile_alternate: int = 0
+	tile_alternate = TileSetAtlasSource.TRANSFORM_TRANSPOSE | TileSetAtlasSource.TRANSFORM_FLIP_H
+	return tile_alternate
+
 func redraw():
 	# Clear the TileMap
 	front_map.clear()
 	
-	# Draw all placed blocks fromo base pos
-	for block in placed_blocks:
-		var pos = block["position"]
-		var block_rotation = block.get("rotation")
+	# Draw all placed blocks from their base positions
+	for block_data in placed_blocks:
+		var pos = block_data["position"]
+		var block_rotation = block_data["rotation"]
 		var y_pos = SIZE_Y - 1 - pos.y
-		if block_rotation == 0:
+		
+		if block_rotation == 0:  # Vertical - use normal tiles
 			front_map.set_cell(0, Vector2i(pos.x, y_pos), 0, TILE_MILK_BOTTOM)
 			front_map.set_cell(0, Vector2i(pos.x, y_pos - 1), 0, TILE_MILK_MIDDLE)
 			front_map.set_cell(0, Vector2i(pos.x, y_pos - 2), 0, TILE_MILK_TOP)
-		else:
-			front_map.set_cell(0, Vector2i(pos.x, y_pos), 1, TILE_MILK_H_BOTTOM)
-			front_map.set_cell(0, Vector2i(pos.x + 1, y_pos), 1, TILE_MILK_H_MIDDLE)
-			front_map.set_cell(0, Vector2i(pos.x + 2, y_pos), 1, TILE_MILK_H_TOP)
+		else:  # Horizontal - use rotated tiles
+			var alternate = _update_tile(Vector2(pos.x, y_pos))
+			front_map.set_cell(0, Vector2i(pos.x, y_pos), 0, TILE_MILK_BOTTOM, alternate)
+			front_map.set_cell(0, Vector2i(pos.x + 1, y_pos), 0, TILE_MILK_MIDDLE, alternate)
+			front_map.set_cell(0, Vector2i(pos.x + 2, y_pos), 0, TILE_MILK_TOP, alternate)
 	
 	queue_redraw()
 
@@ -160,41 +162,35 @@ func draw_grid(w: int, h: int, tile_size: Vector2, color: Color, offset: Vector2
 			offset + Vector2(w * tile_size.x, y * tile_size.y),
 			color
 		)
+
 func draw_cursor_preview(tile_size: Vector2, offset: Vector2):
 	var can_place = can_place_block(cursor, rot)
 	var cursor_color = Color(0,1,0,0.3) if can_place else Color(1, 0, 0, 0.3)
-	#var base_y = SIZE_Y - 1 - cursor.y
+	
 	if rot == 0:  # Vertical orientation (3 blocks tall, 1 block wide)
 		var base_y = SIZE_Y - 1 - cursor.y
-		# Draw 3 green squares vertically
+		# Draw 3 squares vertically
 		for i in range(3):
 			var tile_pos = Vector2i(cursor.x, base_y - i)
 			var rect_pos = offset + Vector2(tile_pos.x * tile_size.x, tile_pos.y * tile_size.y)
 			var rect = Rect2(rect_pos, tile_size)
 			draw_rect(rect, cursor_color)
-
-	#if rot == 0:
-		#for i in range(3):
-			#var tile_pos = Vector2i(cursor.x, base_y - 1)
-			#var rect_pos = offset + Vector2(tile_pos.x * tile_size.x, tile_pos.y * tile_size.y)
-			#var rect = Rect2(rect_pos, tile_size)
-			#draw_rect(rect, cursor_color)
 	else:  # Horizontal orientation (3 blocks wide, 1 block tall)
 		var y_pos = SIZE_Y - 1 - cursor.y
-		# Draw 3 green squares horizontally
+		# Draw 3 squares horizontally
 		for i in range(3):
 			var tile_pos = Vector2i(cursor.x + i, y_pos)
 			var rect_pos = offset + Vector2(tile_pos.x * tile_size.x, tile_pos.y * tile_size.y)
 			var rect = Rect2(rect_pos, tile_size)
 			draw_rect(rect, cursor_color)
-			#draw_rect(rect, cursor_color)
 
 func place_block(pos: Vector2i):
-	# mark positions in grid_2d for collision
+	# Mark all positions as occupied in grid_2d for collision detection
 	var positions = get_block_position(pos, rot)
-	for block in positions:
-		grid_2d[block] = true
+	for block_pos in positions:
+		grid_2d[block_pos] = true  # Just mark as occupied
 	
+	# Store only the base position and rotation in placed_blocks for rendering
 	placed_blocks.append({
 		"position": pos,
 		"rotation": rot,

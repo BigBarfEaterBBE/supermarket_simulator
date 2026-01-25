@@ -11,7 +11,7 @@ config_version=5
 [application]
 
 config/name="supermarket_simulator"
-run/main_scene="uid://odjodc7u5o6e"
+run/main_scene="uid://b616ctnfivlru"
 config/features=PackedStringArray("4.4", "Mobile")
 config/icon="res://icon.svg"
 
