@@ -1,9 +1,8 @@
 extends Node2D
 
 # Grid size
-const SIZE_X := 6
+const SIZE_X := 4
 const SIZE_Y := 6
-const SIZE_Z := 6
 
 # 2D grid dictionary: key = Vector2i(x,y), value = block type string
 var grid_2d := {}
@@ -26,10 +25,10 @@ const TILE_MILK_MIDDLE := Vector2i(3, 2)
 const TILE_MILK_TOP := Vector2i(3, 1)
 
 func _ready():
-	var screen_center = get_viewport_rect().size / 2
+	var screen_center = get_viewport_rect().size / 3
 	
 	front_map.scale = Vector2(0.25, 0.25)
-	front_map.position = screen_center
+	front_map.position = Vector2(200,320)
 	
 	center_tilemap(front_map, SIZE_X, SIZE_Y)
 	redraw()
