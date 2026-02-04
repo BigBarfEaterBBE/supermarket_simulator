@@ -27,8 +27,10 @@ const TILE_MILK_MIDDLE := Vector2i(3, 2)
 const TILE_MILK_TOP := Vector2i(3, 1)
 
 func _ready():
-	var screen_center = get_viewport_rect().size / 3
+	z_index = 100  # Set Grid's z-index very high
+	front_map.z_index = 100  # Also set the TileMap's z-index
 	
+	var screen_center = get_viewport_rect().size / 3
 	front_map.scale = Vector2(0.25, 0.25)
 	front_map.position = Vector2(200,320)
 	

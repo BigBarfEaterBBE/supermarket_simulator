@@ -18,6 +18,7 @@ func start_spawn_timer():
 func spawn_item():
 	var item_instance = item_scene.instantiate()
 	item_folder_node.add_child(item_instance)
+	item_instance.z_index = -100
 	item_instance.position = SPAWN_POS
 
 func has_item_available() -> bool:

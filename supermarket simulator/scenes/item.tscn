@@ -3,10 +3,8 @@
 [ext_resource type="Texture2D" uid="uid://hnrttj4oywxe" path="res://supermarket simulator/assets/calpico - Copy.png" id="1_a5lcf"]
 
 [node name="Item" type="Node2D"]
-z_index = 1
 
 [node name="Sprite2D" type="Sprite2D" parent="."]
-z_index = 1
 z_as_relative = false
 position = Vector2(43, 128)
 texture = ExtResource("1_a5lcf")

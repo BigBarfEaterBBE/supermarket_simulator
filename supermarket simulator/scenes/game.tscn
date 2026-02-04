@@ -1,9 +1,8 @@
-[gd_scene load_steps=6 format=3 uid="uid://cvy1mhopymqfe"]
+[gd_scene load_steps=5 format=3 uid="uid://cvy1mhopymqfe"]
 
 [ext_resource type="PackedScene" uid="uid://b616ctnfivlru" path="res://supermarket simulator/scenes/checkout.tscn" id="1_8i2cv"]
 [ext_resource type="Script" uid="uid://idvgh6756ojq" path="res://supermarket simulator/scripts/game.gd" id="1_sd5c3"]
 [ext_resource type="PackedScene" uid="uid://odjodc7u5o6e" path="res://supermarket simulator/scenes/grid.tscn" id="2_8i2cv"]
-[ext_resource type="PackedScene" uid="uid://itwkso23edqh" path="res://supermarket simulator/scenes/item.tscn" id="3_b7eol"]
 [ext_resource type="Script" uid="uid://b5kx62jqo42ig" path="res://supermarket simulator/scripts/items.gd" id="5_4cqa8"]
 
 [node name="Game" type="Node2D"]
@@ -13,6 +12,12 @@ metadata/_edit_vertical_guides_ = [200.0, 696.0]
 
 [node name="Checkout" parent="." instance=ExtResource("1_8i2cv")]
 
+[node name="Items" type="Node2D" parent="."]
+script = ExtResource("5_4cqa8")
+
+[node name="SpawnTimer" type="Timer" parent="."]
+wait_time = 3.0
+
 [node name="ColorRect2" type="ColorRect" parent="."]
 anchors_preset = 9
 anchor_bottom = 1.0
@@ -21,18 +26,8 @@ offset_bottom = 648.0
 grow_vertical = 2
 color = Color(0, 0, 0, 1)
 
-[node name="Items" type="Node" parent="."]
-script = ExtResource("5_4cqa8")
-
 [node name="Grid" parent="." instance=ExtResource("2_8i2cv")]
 z_index = 2
 z_as_relative = false
-
-[node name="Item" parent="." instance=ExtResource("3_b7eol")]
-visible = false
-position = Vector2(299, 206)
-
-[node name="SpawnTimer" type="Timer" parent="."]
-wait_time = 3.0
 
 [connection signal="timeout" from="SpawnTimer" to="." method="_on_Spawn_timer_timeout"]
