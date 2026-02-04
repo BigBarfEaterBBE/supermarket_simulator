@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://dc4vsekjocsbp"
-path="res://.godot/imported/IMG_7049.png-b2e78a70ce45e4ffcd1c12eedbef9838.ctex"
+uid="uid://dmkusffuieh7i"
+path="res://.godot/imported/eyes0.png-3ce3596346be00524559111466024f64.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://supermarket simulator/assets/IMG_7049.png"
-dest_files=["res://.godot/imported/IMG_7049.png-b2e78a70ce45e4ffcd1c12eedbef9838.ctex"]
+source_file="res://supermarket simulator/assets/eyes0.png"
+dest_files=["res://.godot/imported/eyes0.png-3ce3596346be00524559111466024f64.ctex"]
 
 [params]
 
