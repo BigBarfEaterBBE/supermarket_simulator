@@ -8,6 +8,8 @@
 script = ExtResource("1_gxk0l")
 
 [node name="FrontViewTileMap" type="TileMap" parent="."]
+z_index = 2
+z_as_relative = false
 scale = Vector2(0.3, 0.3)
 tile_set = ExtResource("2_08nds")
 format = 2

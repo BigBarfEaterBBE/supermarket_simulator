@@ -1,5 +1,7 @@
 extends Node2D
 
+@onready var game := get_parent()
+
 # Grid size
 const SIZE_X := 4
 const SIZE_Y := 6
@@ -84,6 +86,7 @@ func _input(event):
 	elif event.is_action_pressed("place_block"):
 		if can_place_block(cursor, rot):
 			place_block(cursor)
+			game.consume_item()
 			redraw()
 	
 	# Redraw if cursor moved to update preview
@@ -103,6 +106,9 @@ func get_block_position(pos: Vector2i, rotation: int) -> Array[Vector2i]:
 	return positions
 
 func can_place_block(pos: Vector2i, rotation: int) -> bool:
+	if not game.has_item_available():
+		return false
+	
 	var positions = get_block_position(pos, rotation)
 	for block_pos in positions:
 		if is_occupied(block_pos):
