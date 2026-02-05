@@ -1,9 +1,10 @@
-[gd_scene load_steps=5 format=3 uid="uid://cvy1mhopymqfe"]
+[gd_scene load_steps=6 format=3 uid="uid://cvy1mhopymqfe"]
 
 [ext_resource type="PackedScene" uid="uid://b616ctnfivlru" path="res://supermarket simulator/scenes/checkout.tscn" id="1_8i2cv"]
 [ext_resource type="Script" uid="uid://idvgh6756ojq" path="res://supermarket simulator/scripts/game.gd" id="1_sd5c3"]
 [ext_resource type="PackedScene" uid="uid://odjodc7u5o6e" path="res://supermarket simulator/scenes/grid.tscn" id="2_8i2cv"]
 [ext_resource type="Script" uid="uid://b5kx62jqo42ig" path="res://supermarket simulator/scripts/items.gd" id="5_4cqa8"]
+[ext_resource type="AudioStream" uid="uid://dukf1hrquxmoc" path="res://supermarket simulator/assets/cashregisterbeep.wav" id="5_cw2xb"]
 
 [node name="Game" type="Node2D"]
 script = ExtResource("1_sd5c3")
@@ -29,5 +30,8 @@ color = Color(0, 0, 0, 1)
 [node name="Grid" parent="." instance=ExtResource("2_8i2cv")]
 z_index = 2
 z_as_relative = false
+
+[node name="SpawnFX" type="AudioStreamPlayer2D" parent="."]
+stream = ExtResource("5_cw2xb")
 
 [connection signal="timeout" from="SpawnTimer" to="." method="_on_Spawn_timer_timeout"]

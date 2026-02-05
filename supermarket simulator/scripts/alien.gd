@@ -34,10 +34,17 @@ const pupils = {
 
 var rng = RandomNumberGenerator.new()
 
-# Called when the node enters the scene tree for the first time.
-func _ready() -> void:
+func randomize_appearance():
 	bodySprite.texture = bodies[rng.randi_range(0,bodies.size()-1)]
 	eyesSprite.texture = eyes[rng.randi_range(0,eyes.size()-1)]
 	earsSprite.texture = ears[rng.randi_range(0,ears.size()-1)]
 	pupilsSprite.texture = pupils[rng.randi_range(0,pupils.size()-1)]
 	mouthSprite.texture = mouths[rng.randi_range(0,mouths.size()-1)]
+
+# Called when the node enters the scene tree for the first time.
+#func _ready() -> void:
+	#bodySprite.texture = bodies[rng.randi_range(0,bodies.size()-1)]
+	#eyesSprite.texture = eyes[rng.randi_range(0,eyes.size()-1)]
+	#earsSprite.texture = ears[rng.randi_range(0,ears.size()-1)]
+	#pupilsSprite.texture = pupils[rng.randi_range(0,pupils.size()-1)]
+	#mouthSprite.texture = mouths[rng.randi_range(0,mouths.size()-1)]
